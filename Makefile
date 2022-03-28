@@ -1,9 +1,10 @@
 CC=gcc								# compilador
 CFLAGS=-Wall -O3 -g		# opções de compilação
-TARGET=wordboard			# executável
+TARGET=build					# directório de saída
 
 all: wordboard.c
-	$(CC) wordboard.c -o ${TARGET}
+	mkdir -p ${TARGET}
+	cd ${TARGET} && $(CC) ../wordboard.c -o wordboard
 
 clean:
-	rm *.o ${TARGET}
+	rm -rf ${TARGET}

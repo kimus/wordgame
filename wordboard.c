@@ -23,11 +23,20 @@ int main() {
   ask_position_and_word_help();
   int ok = 0;
   do {
+    // pedir a posição e palavra
     int coluna; int linha; char dir; char word[100];
     ok = ask_position_and_word(linhas, colunas, &linha, &coluna, &dir, word);
+
+    // posição e palavra colocada, inserir a palavra e re-desenhar o tabuleiro
     if (ok == 0) {
       add_word_to_board(linhas, colunas, tabuleiro, words, linha, coluna, dir, word);
       print_board(linhas, colunas, tabuleiro);
+    } 
+    
+    // fim
+    else if (ok == 2) {
+      // TODO: ...
+      printf("Total de pontos: %d\n", 0);
     }
   } while (ok == 0);  
 
@@ -38,7 +47,7 @@ int main() {
 void ask_game_mode(int* m) {
   int ok = 1;
   do {
-    printf("Escolha o modo do jogo.");
+    printf("Escolha o modo do jogo.\n");
     printf("\t1 - jogador (livre)\n");
     printf("\t2 - computador (livre)\n");
     printf("\t3 - computador (restrição)\n");
@@ -221,11 +230,4 @@ int ask_position_and_word(int linhas, int colunas, int* linha, int* coluna, char
   while (ok == 1);
 
   return ok;
-}
-
-void modo1(char* a, int b)
-{
-  if (printf("fim")) {
-    printf("Total de pontos: %d", 0);
-  }
 }
