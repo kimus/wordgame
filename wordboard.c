@@ -5,9 +5,14 @@
 #include "wordboard.h"
 
 const char alpha[] = "ABCDEFGHILMNOPQRSTUVWXYZ";
+const char points[] = { 1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 3, 1, 1, 3, 10, 1, 1, 1, 1, 4, 4, 8, 4, 10 };
+int dic_lines = 0; // numero de palavras no dicionário
+char** dic_words; // apontador para o dicionário de palavras
 
 int main() {
   int linhas, colunas, mode;
+
+  read_dict_file("/usr/share/dict/words");
   
   ask_game_mode(&mode);
   ask_dimensions(&linhas, &colunas);
@@ -41,13 +46,68 @@ int main() {
     
     // fim
     else if (ok == 2) {
-      // TODO: ...
-      printf("Total de pontos: %d\n", 0);
+      print_board_points(linhas, colunas, tabuleiro, words);
     }
   } while (ok == 0);  
 
   printf("bye!\n\n");
   return EXIT_SUCCESS;
+}
+
+void read_dict_file(char* file) {
+  // abrir o ficheiro para leitura
+  FILE *f= fopen(file, "r");
+
+  if (f == NULL) {
+    // perror() imprime o motivo do erro em vez de usar printf()
+    perror("Não foi possível ler o dicionário de palavras");
+    exit(EXIT_FAILURE);
+  }
+
+  // descobrir o numero de linhas do ficheiro
+  char ch;
+  dic_lines = 0;
+  do {
+    ch = fgetc(f);
+    if (ch == '\n') dic_lines++;
+  } while (ch != EOF);
+
+  // voltar à primeira linha do ficheiro
+  rewind(f);
+
+  // alocar em memória
+  dic_words = (char **) malloc(dic_lines * sizeof(char *));
+  if (dic_words == NULL) {
+    perror("Não foi possível alocar memóri para o dicionário de palavras");
+    exit(EXIT_FAILURE);
+  }
+
+  // ler o ficheiro linha a linha e copiar para a memória
+  for (int i = 0; i < dic_lines; i++) {
+    dic_words[i] = NULL;
+    size_t n = 0;
+    size_t len = getline(&dic_words[i], &n, f);
+    if (ferror(f)) {
+      perror("Erro ao ler o dicionário");
+      exit(EXIT_FAILURE);
+    }
+
+    dic_words[i][len -1] = '\0'; // remover a quebra de linha
+  }
+
+  printf("Foram encontradas %d palavras no dictionario.\n", dic_lines);
+
+  // fechar o ficheiro
+  fclose(f);
+}
+
+int is_word_valid(char word[]) {
+  for (int i = 0; i < dic_lines; i++) {
+    if (strcmp(dic_words[i], word) == 0) {
+      return 0;
+    }
+  }
+  return 1;
 }
 
 void ask_game_mode(int* m) {
@@ -167,6 +227,33 @@ void print_board(int linhas, int colunas, char tabuleiro[linhas][colunas], char 
   printf("\n\n");
 }
 
+void print_board_points(int linhas, int colunas, char tabuleiro[linhas][colunas], char words[linhas][colunas]) {
+  int pontos = 0;
+
+  for (int linha = 0; linha < linhas; linha++) {
+    for (int coluna = 0; coluna < colunas; coluna++) {
+      char p = tabuleiro[linha][coluna];
+      char c = words[linha][coluna];
+      if (c && c != '\0') {
+        // buscar o index da letra e buscar os pontos da mesma
+        int idx = (strchr(alpha, toupper(c)) - alpha) + 1;
+        int pnt = points[idx];
+
+        // aplicar os pontos
+        if (p == '3') {
+          pontos += pnt * 3;
+        } else if (p == '2' || p == '$') {
+          pontos += pnt * 2;
+        } else {
+          pontos += pnt;
+        }
+      }
+    }
+  }
+
+  printf("\nTotal de pontos: %d\n", pontos);
+}
+
 void add_word_to_board(int linhas, int colunas, char tabuleiro[linhas][colunas], char words[linhas][colunas], int linha, int coluna, char dir, char word[]) {
   int l = linha - 1;
   int c = coluna - 1;
@@ -179,29 +266,59 @@ void add_word_to_board(int linhas, int colunas, char tabuleiro[linhas][colunas],
   printf("palavra: %s\n", word);
   */
 
-  // TODO: suportar a direcção vertical
+  // valida se a palavra é válida de acordo com o diconário
+  if (is_word_valid(word) == 1) {
+    printf("\n\tPalavra inválida! Não existe no dicionário!\n");
+    return;
+  }
+
 
   // valida se a palavra cabe no tabuleiro
-  if ((c + len - 1) > colunas) {
-    printf("A palavra não poder ser aplicada porque passa fora no tabuleiro!\n");
+  if (
+    (dir == 'H' && (c + len - 1) > colunas) ||
+    (dir == 'V' && (l + len - 1) > linhas)
+  ) {
+    printf("\n\tA palavra não poder ser aplicada porque passa fora no tabuleiro!\n");
     return;
   }
 
   // valida se a palavra pode ser colocana tabuleiro (se intercecta alguma casa proíbida)
   for (int i = 0; i < len; i++) {
-    int cc = c + i; // posição da letra
-    char letra = tabuleiro[l][cc];
+    
+    // posição do tabuleiro
+    int ll = l, cc = c;
+    if (dir == 'H') {
+      cc = c + i;
+    } else {
+      ll = l + i;
+    }
+
+    // buscar a casa da posição calculada
+    char letra = tabuleiro[ll][cc];
+
+    // validar a casa
     if (letra == '#') {
-      printf("A palavra não pode ser aplicada porque a posição %c%d é uma casa proíbida!\n", alpha[cc], linha);
+      printf("\n\tA palavra não pode ser aplicada porque a posição %c%d é uma casa proíbida!\n", alpha[cc], linha);
       return;
     }
   }
 
-  // insere a palavra no tabuleiro
+  // a palavra pode ser colocada sem problemas no tabuleiro
+  // inserir a palavra na posição e direcção pretendidas
   for (int i = 0; i <= len; i++) {
-    int cc = c + i;
+    // posição do tabuleiro
+    int ll = l, cc = c;
+    if (dir == 'H') {
+      cc = c + i;
+    } else {
+      ll = l + i;
+    }
+    
+    // buscar a letra da palavra
     char letra = tolower(word[i]);
-    words[l][cc] = letra;
+    
+    // inserir a letra na posição do tabuleiro
+    words[ll][cc] = letra;
   }
 }
 
@@ -269,8 +386,6 @@ int ask_position_and_word(int linhas, int colunas, int* linha, int* coluna, char
     *linha = l;
     *coluna = c;
     *dir = d;
-
-    // TODO: validar se a palavra é válida de acordo com o diconário
     
     ok = 0;
   }
