@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "wordboard.h"
 
 const char alpha[] = "ABCDEFGHILMNOPQRSTUVWXYZ";
@@ -17,20 +18,25 @@ int main() {
   char tabuleiro[linhas][colunas];
   char words[linhas][colunas];
 
+  // 'limpar' as posições das palabras do tabuleiro
+  for (int i = 0; i < linhas; i++) {
+    memset(words[i], 0, colunas);
+  }
+
   init_board(linhas, colunas, tabuleiro);
-  print_board(linhas, colunas, tabuleiro);
+  print_board(linhas, colunas, tabuleiro, words);
 
   ask_position_and_word_help();
   int ok = 0;
   do {
     // pedir a posição e palavra
-    int coluna; int linha; char dir; char word[100];
+    int coluna; int linha; char dir; char word[100] = {0};
     ok = ask_position_and_word(linhas, colunas, &linha, &coluna, &dir, word);
 
     // posição e palavra colocada, inserir a palavra e re-desenhar o tabuleiro
     if (ok == 0) {
       add_word_to_board(linhas, colunas, tabuleiro, words, linha, coluna, dir, word);
-      print_board(linhas, colunas, tabuleiro);
+      print_board(linhas, colunas, tabuleiro, words);
     } 
     
     // fim
@@ -47,6 +53,8 @@ int main() {
 void ask_game_mode(int* m) {
   int ok = 1;
   do {
+    fflush(stdin);
+
     printf("Escolha o modo do jogo.\n");
     printf("\t1 - jogador (livre)\n");
     printf("\t2 - computador (livre)\n");
@@ -70,6 +78,8 @@ void ask_game_mode(int* m) {
 void ask_dimensions(int* l, int* c) {
   int ok = 1;
   do {
+    fflush(stdin);
+
     printf("indique a dimensao do tabuleiro que desejar: ");
     scanf("%dx%d", l, c);
 
@@ -110,8 +120,8 @@ void init_board(int linhas, int colunas, char tabuleiro[linhas][colunas]) {
 
       // casa proíbidas
       else if (
-        ((linha == 1) && (coluna == ((colunas / 2)-1) || (coluna == (colunas / 2)+1))) ||
-        ((coluna == 1) && (linha == ((linhas / 2)-1) || (linha == (linhas / 2) + 1))) ||
+        ((linha == 1) && (coluna == ((colunas / 2) - 1) || (coluna == (colunas / 2) + 1))) ||
+        ((coluna == 1) && (linha == ((linhas / 2) - 1) || (linha == (linhas / 2) + 1))) ||
         ((linha == linhas - 2) && (coluna == (( colunas / 2) - 1) || (coluna == (colunas / 2) + 1))) ||
         ((coluna == colunas - 2) && (linha == (( linhas / 2) - 1)|| (linha == (linhas / 2) + 1)))
       ) {
@@ -126,7 +136,7 @@ void init_board(int linhas, int colunas, char tabuleiro[linhas][colunas]) {
   }
 }
 
-void print_board(int linhas, int colunas, char tabuleiro[linhas][colunas]) { 
+void print_board(int linhas, int colunas, char tabuleiro[linhas][colunas], char words[linhas][colunas]) { 
   for (int linha = 0; linha <= linhas; linha++) {
     printf("\n");
 
@@ -143,7 +153,13 @@ void print_board(int linhas, int colunas, char tabuleiro[linhas][colunas]) {
       if (linha == linhas) {
         printf("%c ", alpha[coluna]);
       } else {
-        printf("%2c", tabuleiro[linha][coluna]);
+        // se existir palavras já inseridas colocálas
+        char c = words[linha][coluna];
+        if (c && c != '\0') {
+          printf("%2c", c);  
+        } else {
+          printf("%2c", tabuleiro[linha][coluna]);
+        }
       }
     }
   }
@@ -152,10 +168,41 @@ void print_board(int linhas, int colunas, char tabuleiro[linhas][colunas]) {
 }
 
 void add_word_to_board(int linhas, int colunas, char tabuleiro[linhas][colunas], char words[linhas][colunas], int linha, int coluna, char dir, char word[]) {
-  printf("linha: %d\n", linha);
-  printf("coluna: %d\n", coluna);
+  int l = linha - 1;
+  int c = coluna - 1;
+  int len = strlen(word);
+
+  /*
+  printf("linha: %d de %d (%d)\n", linha, linhas, c + len - 1);
+  printf("coluna: %d de %d\n", coluna, colunas);
   printf("dir: %c\n", dir);
   printf("palavra: %s\n", word);
+  */
+
+  // TODO: suportar a direcção vertical
+
+  // valida se a palavra cabe no tabuleiro
+  if ((c + len - 1) > colunas) {
+    printf("A palavra não poder ser aplicada porque passa fora no tabuleiro!\n");
+    return;
+  }
+
+  // valida se a palavra pode ser colocana tabuleiro (se intercecta alguma casa proíbida)
+  for (int i = 0; i < len; i++) {
+    int cc = c + i; // posição da letra
+    char letra = tabuleiro[l][cc];
+    if (letra == '#') {
+      printf("A palavra não pode ser aplicada porque a posição %c%d é uma casa proíbida!\n", alpha[cc], linha);
+      return;
+    }
+  }
+
+  // insere a palavra no tabuleiro
+  for (int i = 0; i <= len; i++) {
+    int cc = c + i;
+    char letra = tolower(word[i]);
+    words[l][cc] = letra;
+  }
 }
 
 void ask_position_and_word_help() {
@@ -192,7 +239,7 @@ int ask_position_and_word(int linhas, int colunas, int* linha, int* coluna, char
 
     // a coluna está na primeira posição
     // converter o caracter para um valor numérico indo buscar a posição onde se encontra
-    c = (strchr(alpha, input[0]) - alpha) + 1;
+    c = (strchr(alpha, toupper(input[0])) - alpha) + 1;
     // validar se o resultado está entre os valores possíveis
     if (c <= 0 || c > colunas) {
       printf("\nColuna inválida! Tem de ser um número entre 1 e %d. Por favor tente novamente.\n\n", colunas);
@@ -209,7 +256,7 @@ int ask_position_and_word(int linhas, int colunas, int* linha, int* coluna, char
 
     // a direção está na terceira posição
     // validar se está dentro dos dois valores possíveis
-    d = input[2];
+    d = toupper(input[2]);
     if (d != 'H' && d != 'V') {
       printf("\nDirecção inválida! Tem de ser H ou V. Por favor tente novamente.\n\n");
       continue;
