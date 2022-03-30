@@ -4,7 +4,7 @@ TARGET=build					# directório de saída
 
 all: wordboard.c
 	mkdir -p ${TARGET}
-	cd ${TARGET} && $(CC) ../wordboard.c -o wordboard
+	cd ${TARGET} && $(CC) $(CFLAGS) ../wordboard.c -o wordboard
 
 clean:
 	rm -rf ${TARGET}

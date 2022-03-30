@@ -9,6 +9,12 @@ const char points[] = { 1, 3, 3, 2, 1, 4, 2, 4, 1, 8, 5, 1, 3, 1, 1, 3, 10, 1, 1
 int dic_lines = 0; // numero de palavras no dicionário
 char** dic_words; // apontador para o dicionário de palavras
 
+// verificar se o buffer de input é limpo antes de usar o scanf() novamente
+void flush() {
+  int c;
+  while ((c = getchar()) != '\n' && c != EOF) {}
+}
+
 int main() {
   int linhas, colunas, mode;
 
@@ -113,8 +119,6 @@ int is_word_valid(char word[]) {
 void ask_game_mode(int* m) {
   int ok = 1;
   do {
-    fflush(stdin);
-
     printf("Escolha o modo do jogo.\n");
     printf("\t1 - jogador (livre)\n");
     printf("\t2 - computador (livre)\n");
@@ -123,6 +127,7 @@ void ask_game_mode(int* m) {
 
     printf("indique o modo de jogo que quer jogar: ");
     scanf("%d", m);
+    flush();
 
     int modo = *m;
 
@@ -138,10 +143,9 @@ void ask_game_mode(int* m) {
 void ask_dimensions(int* l, int* c) {
   int ok = 1;
   do {
-    fflush(stdin);
-
     printf("indique a dimensao do tabuleiro que desejar: ");
     scanf("%dx%d", l, c);
+    flush();
 
     int linhas = *l;
     int colunas = *c;
@@ -305,7 +309,7 @@ void add_word_to_board(int linhas, int colunas, char tabuleiro[linhas][colunas],
 
   // a palavra pode ser colocada sem problemas no tabuleiro
   // inserir a palavra na posição e direcção pretendidas
-  for (int i = 0; i <= len; i++) {
+  for (int i = 0; i < len; i++) {
     // posição do tabuleiro
     int ll = l, cc = c;
     if (dir == 'H') {
@@ -335,14 +339,10 @@ void ask_position_and_word_help() {
 int ask_position_and_word(int linhas, int colunas, int* linha, int* coluna, char* dir, char* word) {  
   int ok = 1;
   do {
-    
-    // limpa o buffer de input
-    fflush(stdin);
-
     char input[255];
     printf("Insira as palavaras da forma anteriormente apresentada: ");
     scanf("%[^\n]", input);
-
+    flush();
     
     int c, l;
     char d;
